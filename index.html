@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Side Raiser</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%;
+            background: #000;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+
+// =====================================================
+// ゲームデータ辞書（言葉・メッセージはここを編集）
+// =====================================================
+const GAME_DICTIONARY = {
+    obstacles: [
+        { day: 1,   text: "どうせ無理だよ" },
+        { day: 2,   text: "明日から頑張ればいいじゃん" },
+        { day: 3,   text: "三日も持たないよ" },
+        { day: 4,   text: "やめな？どうせ無駄だから" },
+        { day: 5,   text: "筋トレとかウケるww" },
+        { day: 6,   text: "まあ続かないだろうけどガンバって" },
+        { day: 7,   text: "いいじゃん。チートデイだよ" },
+        { day: 8,   text: "え？ww 飲み会は行くよね？w" },
+        { day: 9,   text: "よくやるね" },
+        { day: 10,  text: "いつまで続くのやら" },
+        { day: 11,  text: "今日は疲れてるし休んどこ？" },
+        { day: 12,  text: "別に今やらなくてもいいよね" },
+        { day: 13,  text: "時間ないから仕方ないよ" },
+        { day: 14,  text: "ちょっとくらい変わらないって" },
+        { day: 15,  text: "せっかくの休日なんだから" },
+        { day: 16,  text: "外は雨降ってるよ" },
+        { day: 17,  text: "全然寝れてなくない？" },
+        { day: 18,  text: "最近忙しかったからね" },
+        { day: 19,  text: "なんか体調悪い気がする" },
+        { day: 20,  text: "もうそろ辞めてもよくない？" },
+        { day: 21,  text: "全然変わってないじゃん" },
+        { day: 22,  text: "逆に太ってない？" },
+        { day: 23,  text: "ねえたまには息抜きしようよ" },
+        { day: 24,  text: "最近ノリ悪くなったね" },
+        { day: 25,  text: "一緒に飲みにいけないの寂しいわ" },
+        { day: 26,  text: "愚痴くらい聞いてよ" },
+        { day: 27,  text: "ずっと筋肉の事ばっかでつまんない" },
+        { day: 28,  text: "今日送別会だよ？行かないの？" },
+        { day: 29,  text: "そんなに鍛えてどこ目指してんの？" },
+        { day: 30,  text: "昔の方がシュッとしてて良かったよ" },
+        { day: 31,  text: "プロテインって体に悪いんでしょ？" },
+        { day: 32,  text: "筋肉が脂肪になるよ" },
+        { day: 33,  text: "結局、顔が良ければ関係ないよ" },
+        { day: 34,  text: "服のサイズ合わなくなってダサくない？" },
+        { day: 35,  text: "見せ筋（笑）でしょ？" },
+        { day: 36,  text: "重いもの持って何が楽しいの？" },
+        { day: 37,  text: "プロテイン代、もったいなくない？" },
+        { day: 38,  text: "どうせ大会とか出ないんでしょ？" },
+        { day: 39,  text: "モテたいんだろwww" },
+        { day: 40,  text: "筋肉つけるとバカになるらしいよ" },
+        { day: 41,  text: "脳みそまで筋肉になるよ" },
+        { day: 42,  text: "筋肉で解決しようとするの野蛮だよね" },
+        { day: 43,  text: "筋トレしてる人ってナルシストだよね" },
+        { day: 44,  text: "付き合い悪くなったよね" },
+        { day: 45,  text: "そんな鍛えて何目指してるの？www" },
+        { day: 46,  text: "誰もあんたのことなんて見てないから" },
+        { day: 47,  text: "そんなことよりもっと勉強したら？" },
+        { day: 48,  text: "仕事ができるようになるわけじゃないよ" },
+        { day: 49,  text: "ジム代10年で120万の損だよ" },
+        { day: 50,  text: "よく続けるね、一生やるつもり？" },
+        { day: 51,  text: "1週間休んだらリセットされるよ" },
+        { day: 52,  text: "結局は遺伝で決まってるから" },
+        { day: 53,  text: "歳とったら全部垂れ下がってくるよ" },
+        { day: 54,  text: "プロテイン飲む暇あったら本でも読めば？" },
+        { day: 55,  text: "積立NISAに回した方が賢いよ" },
+        { day: 56,  text: "空気読もうよ、一口くらい食べなよ" },
+        { day: 57,  text: "誕生日でしょ。ケーキ買ったから食べて" },
+        { day: 58,  text: "もう十分頑張ってるよ" },
+        { day: 59,  text: "ケガしたら終わりだよ" },
+        { day: 60,  text: "まだやってるんだw飽きないね" },
+        { day: 61,  text: "そんなストイックじゃなくてよくない？" },
+        { day: 62,  text: "そこまでやる意味ある？" },
+        { day: 63,  text: "誰もそこまで求めてないよ" },
+        { day: 64,  text: "明日2倍やればいいじゃん" },
+        { day: 65,  text: "今日サボってもバレないよ" },
+        { day: 66,  text: "今日くらい付き合い優先しよ？" },
+        { day: 67,  text: "お前ならできる" },
+        { day: 68,  text: "奴らの声に耳を傾けるな" },
+        { day: 69,  text: "お前のゲームだ" },
+        { day: 70,  text: "自分の意思だろ" },
+        { day: 71,  text: "決めたなら行けよ" },
+        { day: 72,  text: "ここで終わってたまるか" },
+        { day: 73,  text: "自分で選べよ" },
+        { day: 74,  text: "突き抜ける覚悟" },
+        { day: 75,  text: "栄光へ" },
+        { day: 76,  text: "負けるな" },
+        { day: 77,  text: "敵は己だ" },
+        { day: 78,  text: "もうお前は強い" },
+        { day: 79,  text: "波に乗れ" },
+        { day: 80,  text: "これがチャンスだ" },
+        { day: 81,  text: "やるべきことは簡単なこと" },
+        { day: 82,  text: "今日頑張るから明日も頑張れる" },
+        { day: 83,  text: "羽を広げろ" },
+        { day: 84,  text: "お前は飛べる" },
+        { day: 85,  text: "高く、もっと高く" },
+        { day: 86,  text: "自分を信じろ" },
+        { day: 87,  text: "やり切るんだろ" },
+        { day: 88,  text: "大丈夫" },
+        { day: 89,  text: "行け！！！" },
+        { day: 90,  text: "ポストシンギュラリティは筋トレしか勝たん" },
+        { day: 91,  text: "三ヶ月目だ" },
+        { day: 92,  text: "習慣になってきた" },
+        { day: 93,  text: "少し楽になってきた" },
+        { day: 94,  text: "体が変わってきた" },
+        { day: 95,  text: "自信がついてきた" },
+        { day: 96,  text: "周りが褒めてくれる" },
+        { day: 97,  text: "目標が見えてきた" },
+        { day: 98,  text: "継続の喜び" },
+        { day: 99,  text: "あと一ヶ月" },
+        { day: 100, text: "100日達成！" },
+        { day: 101, text: "まだまだいける" },
+        { day: 102, text: "あと264日" }, { day: 103, text: "あと263日" }, { day: 104, text: "あと262日" },
+        { day: 105, text: "あと261日" }, { day: 106, text: "あと260日" }, { day: 107, text: "あと259日" },
+        { day: 108, text: "あと258日" }, { day: 109, text: "あと257日" }, { day: 110, text: "あと256日" },
+        { day: 111, text: "あと255日" }, { day: 112, text: "あと254日" }, { day: 113, text: "あと253日" },
+        { day: 114, text: "あと252日" }, { day: 115, text: "あと251日" }, { day: 116, text: "あと250日" },
+        { day: 117, text: "あと249日" }, { day: 118, text: "あと248日" }, { day: 119, text: "あと247日" },
+        { day: 120, text: "あと246日" }, { day: 121, text: "あと245日" }, { day: 122, text: "あと244日" },
+        { day: 123, text: "あと243日" }, { day: 124, text: "あと242日" }, { day: 125, text: "あと241日" },
+        { day: 126, text: "あと240日" }, { day: 127, text: "あと239日" }, { day: 128, text: "あと238日" },
+        { day: 129, text: "あと237日" }, { day: 130, text: "あと236日" }, { day: 131, text: "あと235日" },
+        { day: 132, text: "あと234日" }, { day: 133, text: "あと233日" }, { day: 134, text: "あと232日" },
+        { day: 135, text: "あと231日" }, { day: 136, text: "あと230日" }, { day: 137, text: "あと229日" },
+        { day: 138, text: "あと228日" }, { day: 139, text: "あと227日" }, { day: 140, text: "あと226日" },
+        { day: 141, text: "あと225日" }, { day: 142, text: "あと224日" }, { day: 143, text: "あと223日" },
+        { day: 144, text: "あと222日" }, { day: 145, text: "あと221日" }, { day: 146, text: "あと220日" },
+        { day: 147, text: "あと219日" }, { day: 148, text: "あと218日" }, { day: 149, text: "あと217日" },
+        { day: 150, text: "あと216日" }, { day: 151, text: "あと215日" }, { day: 152, text: "あと214日" },
+        { day: 153, text: "あと213日" }, { day: 154, text: "あと212日" }, { day: 155, text: "あと211日" },
+        { day: 156, text: "あと210日" }, { day: 157, text: "あと209日" }, { day: 158, text: "あと208日" },
+        { day: 159, text: "あと207日" }, { day: 160, text: "あと206日" }, { day: 161, text: "あと205日" },
+        { day: 162, text: "あと204日" }, { day: 163, text: "あと203日" }, { day: 164, text: "あと202日" },
+        { day: 165, text: "あと201日" }, { day: 166, text: "あと200日" }, { day: 167, text: "あと199日" },
+        { day: 168, text: "あと198日" }, { day: 169, text: "あと197日" }, { day: 170, text: "あと196日" },
+        { day: 171, text: "あと195日" }, { day: 172, text: "あと194日" }, { day: 173, text: "あと193日" },
+        { day: 174, text: "あと192日" }, { day: 175, text: "あと191日" }, { day: 176, text: "あと190日" },
+        { day: 177, text: "あと189日" }, { day: 178, text: "あと188日" }, { day: 179, text: "あと187日" },
+        { day: 180, text: "あと186日" }, { day: 181, text: "あと185日" }, { day: 182, text: "あと184日" },
+        { day: 183, text: "あと183日" }, { day: 184, text: "あと182日" }, { day: 185, text: "あと181日" },
+        { day: 186, text: "あと180日" }, { day: 187, text: "あと179日" }, { day: 188, text: "あと178日" },
+        { day: 189, text: "あと177日" }, { day: 190, text: "あと176日" }, { day: 191, text: "あと175日" },
+        { day: 192, text: "あと174日" }, { day: 193, text: "あと173日" }, { day: 194, text: "あと172日" },
+        { day: 195, text: "あと171日" }, { day: 196, text: "あと170日" }, { day: 197, text: "あと169日" },
+        { day: 198, text: "あと168日" }, { day: 199, text: "あと167日" }, { day: 200, text: "あと166日" },
+        { day: 201, text: "あと165日" }, { day: 202, text: "あと164日" }, { day: 203, text: "あと163日" },
+        { day: 204, text: "あと162日" }, { day: 205, text: "あと161日" }, { day: 206, text: "あと160日" },
+        { day: 207, text: "あと159日" }, { day: 208, text: "あと158日" }, { day: 209, text: "あと157日" },
+        { day: 210, text: "あと156日" }, { day: 211, text: "あと155日" }, { day: 212, text: "あと154日" },
+        { day: 213, text: "あと153日" }, { day: 214, text: "あと152日" }, { day: 215, text: "あと151日" },
+        { day: 216, text: "あと150日" }, { day: 217, text: "あと149日" }, { day: 218, text: "あと148日" },
+        { day: 219, text: "あと147日" }, { day: 220, text: "あと146日" }, { day: 221, text: "あと145日" },
+        { day: 222, text: "あと144日" }, { day: 223, text: "あと143日" }, { day: 224, text: "あと142日" },
+        { day: 225, text: "あと141日" }, { day: 226, text: "あと140日" }, { day: 227, text: "あと139日" },
+        { day: 228, text: "あと138日" }, { day: 229, text: "あと137日" }, { day: 230, text: "あと136日" },
+        { day: 231, text: "あと135日" }, { day: 232, text: "あと134日" }, { day: 233, text: "あと133日" },
+        { day: 234, text: "あと132日" }, { day: 235, text: "あと131日" }, { day: 236, text: "あと130日" },
+        { day: 237, text: "あと129日" }, { day: 238, text: "あと128日" }, { day: 239, text: "あと127日" },
+        { day: 240, text: "あと126日" }, { day: 241, text: "あと125日" }, { day: 242, text: "あと124日" },
+        { day: 243, text: "あと123日" }, { day: 244, text: "あと122日" }, { day: 245, text: "あと121日" },
+        { day: 246, text: "あと120日" }, { day: 247, text: "あと119日" }, { day: 248, text: "あと118日" },
+        { day: 249, text: "あと117日" }, { day: 250, text: "あと116日" }, { day: 251, text: "あと115日" },
+        { day: 252, text: "あと114日" }, { day: 253, text: "あと113日" }, { day: 254, text: "あと112日" },
+        { day: 255, text: "あと111日" }, { day: 256, text: "あと110日" }, { day: 257, text: "あと109日" },
+        { day: 258, text: "あと108日" }, { day: 259, text: "あと107日" }, { day: 260, text: "あと106日" },
+        { day: 261, text: "あと105日" }, { day: 262, text: "あと104日" }, { day: 263, text: "あと103日" },
+        { day: 264, text: "あと102日" }, { day: 265, text: "あと101日" }, { day: 266, text: "あと100日" },
+        { day: 267, text: "あと99日" },  { day: 268, text: "あと98日" },  { day: 269, text: "あと97日" },
+        { day: 270, text: "あと96日" },  { day: 271, text: "あと95日" },  { day: 272, text: "あと94日" },
+        { day: 273, text: "あと93日" },  { day: 274, text: "あと92日" },  { day: 275, text: "あと91日" },
+        { day: 276, text: "あと90日" },  { day: 277, text: "あと89日" },  { day: 278, text: "あと88日" },
+        { day: 279, text: "あと87日" },  { day: 280, text: "あと86日" },  { day: 281, text: "あと85日" },
+        { day: 282, text: "あと84日" },  { day: 283, text: "あと83日" },  { day: 284, text: "あと82日" },
+        { day: 285, text: "あと81日" },  { day: 286, text: "あと80日" },  { day: 287, text: "あと79日" },
+        { day: 288, text: "あと78日" },  { day: 289, text: "あと77日" },  { day: 290, text: "あと76日" },
+        { day: 291, text: "あと75日" },  { day: 292, text: "あと74日" },  { day: 293, text: "あと73日" },
+        { day: 294, text: "あと72日" },  { day: 295, text: "あと71日" },  { day: 296, text: "あと70日" },
+        { day: 297, text: "あと69日" },  { day: 298, text: "あと68日" },  { day: 299, text: "あと67日" },
+        { day: 300, text: "あと66日" },  { day: 301, text: "あと65日" },  { day: 302, text: "あと64日" },
+        { day: 303, text: "あと63日" },  { day: 304, text: "あと62日" },  { day: 305, text: "あと61日" },
+        { day: 306, text: "あと60日" },  { day: 307, text: "あと59日" },  { day: 308, text: "あと58日" },
+        { day: 309, text: "あと57日" },  { day: 310, text: "あと56日" },  { day: 311, text: "あと55日" },
+        { day: 312, text: "あと54日" },  { day: 313, text: "あと53日" },  { day: 314, text: "あと52日" },
+        { day: 315, text: "あと51日" },  { day: 316, text: "あと50日" },  { day: 317, text: "あと49日" },
+        { day: 318, text: "あと48日" },  { day: 319, text: "あと47日" },  { day: 320, text: "あと46日" },
+        { day: 321, text: "あと45日" },  { day: 322, text: "あと44日" },  { day: 323, text: "あと43日" },
+        { day: 324, text: "あと42日" },  { day: 325, text: "あと41日" },  { day: 326, text: "あと40日" },
+        { day: 327, text: "あと39日" },  { day: 328, text: "あと38日" },  { day: 329, text: "あと37日" },
+        { day: 330, text: "あと36日" },  { day: 331, text: "あと35日" },  { day: 332, text: "あと34日" },
+        { day: 333, text: "あと33日" },  { day: 334, text: "あと32日" },  { day: 335, text: "あと31日" },
+        { day: 336, text: "あと30日" },  { day: 337, text: "あと29日" },  { day: 338, text: "あと28日" },
+        { day: 339, text: "あと27日" },  { day: 340, text: "あと26日" },  { day: 341, text: "あと25日" },
+        { day: 342, text: "あと24日" },  { day: 343, text: "あと23日" },  { day: 344, text: "あと22日" },
+        { day: 345, text: "あと21日" },  { day: 346, text: "あと20日" },  { day: 347, text: "あと19日" },
+        { day: 348, text: "あと18日" },  { day: 349, text: "あと17日" },  { day: 350, text: "あと16日" },
+        { day: 351, text: "あと15日" },  { day: 352, text: "あと14日" },  { day: 353, text: "あと13日" },
+        { day: 354, text: "あと12日" },  { day: 355, text: "あと11日" },  { day: 356, text: "あと10日" },
+        { day: 357, text: "あと9日" },   { day: 358, text: "あと8日" },   { day: 359, text: "あと7日" },
+        { day: 360, text: "あと6日" },   { day: 361, text: "あと5日" },   { day: 362, text: "あと4日" },
+        { day: 363, text: "あと3日" },   { day: 364, text: "あと2日" },   { day: 365, text: "最終日！" },
+    ],
+    gameOverMessages: [
+        { minDay: 0,   maxDay: 0,   message: "始まる前に辞めるからお前は雑魚なんだよ" },
+        { minDay: 1,   maxDay: 3,   message: "いつも言い訳して逃げるからお前は雑魚なんだよ" },
+        { minDay: 4,   maxDay: 7,   message: "やればできること見せつけたじゃん、次はもっといける" },
+        { minDay: 8,   maxDay: 30,  message: "指数関数的成長にとって、すべての点は、いつでも始まったばかりだ" },
+        { minDay: 31,  maxDay: 99,  message: "ウケなくてもいいと思うと無視されるが、誰も見ていなくてもゴールを決める喜びに浸ることができる。" },
+        { minDay: 100, maxDay: 364, message: "100日超えの猛者が倒れた。だがお前の体は変わり始めている。" }
+    ],
+    clearMessage: {
+        stat:    "日本の筋トレ1年継続率はわずか3.7%",
+        message: "あなたはできる。あとはやるだけ。さあ今すぐスマホを置いてサイドレイズをやろう！"
+    }
+};
+
+// =====================================================
+// キャンバスセットアップ
+// =====================================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = 400, H = 600;
+canvas.width = W; canvas.height = H;
+
+function resize() {
+    const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+    canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
+}
+window.addEventListener('resize', resize); resize();
+
+// =====================================================
+// キャラクター画像のプリロード
+// =====================================================
+const imgs = { idle: new Image(), mid: new Image(), peak: new Image() };
+imgs.idle.src  = 'images/trainee_idle.png';
+imgs.mid.src   = 'images/trainee_mid.png';
+imgs.peak.src  = 'images/trainee_peak.png';
+
+
+// =====================================================
+// ユーティリティ
+// =====================================================
+const lerp  = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function lerpHex(c0, c1, t) {
+    const r0=parseInt(c0.slice(1,3),16), g0=parseInt(c0.slice(3,5),16), b0=parseInt(c0.slice(5,7),16);
+    const r1=parseInt(c1.slice(1,3),16), g1=parseInt(c1.slice(3,5),16), b1=parseInt(c1.slice(5,7),16);
+    return `rgb(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)})`;
+}
+
+function rRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+    ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+    ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+    ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+    ctx.closePath();
+}
+
+function wrapLines(text, maxW) {
+    const lines = []; let line = '';
+    for (const ch of text) {
+        if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; }
+        else line += ch;
+    }
+    if (line) lines.push(line);
+    return lines;
+}
+
+function drawWrapped(text, cx, startY, maxW, lh) {
+    wrapLines(text, maxW).forEach((l, i) => ctx.fillText(l, cx, startY + i * lh));
+}
+
+// =====================================================
+// ゲーム定数・状態変数
+// =====================================================
+const GRAVITY   = 0.55;
+const JUMP_PWR  = -9.5;
+const PIPE_W    = 68;
+const PIPE_GAP  = 168;
+const PIPE_SPD  = 2.3;
+const SPAWN_MS  = 1700;
+const PX        = 88;   // プレイヤーX（固定）
+const HIT_R     = 16;   // 当たり判定半径
+
+const S = { START:0, PLAY:1, OVER:2, CLEAR:3 };
+let state = S.START;
+let py = H/2, vy = 0, flapT = 0;
+let pipes = [], lastSpawn = 0;
+let day = 0;
+let flashMsg = '', flashT = 0;
+
+// =====================================================
+// 時刻・天気システム
+// =====================================================
+// Day数に応じて朝〜夜〜嵐などが変化する
+// 16日で1日周期（夜明け→昼→夕陽→夜）
+// ゲーム開始は夜明けから（4のオフセット）
+const TOD_CYCLE = 16;
+const TOD_OFFSET = 4;   // スタートを夜明けに合わせる
+
+const WEATHER_SEQ = ['clear','clear','cloudy','rain','clear','snow','wind','clear','storm','clear','cloudy','clear'];
+
+function getTod() {
+    return ((day + TOD_OFFSET) % TOD_CYCLE) / TOD_CYCLE;
+}
+function getWeather() {
+    return WEATHER_SEQ[Math.floor(day / 8) % WEATHER_SEQ.length];
+}
+
+// 空の色キーフレーム（時刻0〜1に対応）
+const SKY_KEYS = [
+    { t:0.00, top:'#000510', bot:'#010a30' },  // 深夜
+    { t:0.14, top:'#0a0028', bot:'#2a0e50' },  // 夜明け前
+    { t:0.22, top:'#6b1f30', bot:'#d4603a' },  // 夜明け（赤）
+    { t:0.28, top:'#ff5500', bot:'#ffc880' },  // 日の出
+    { t:0.38, top:'#3da0d8', bot:'#b8e0f7' },  // 朝
+    { t:0.50, top:'#0d47a1', bot:'#42a5f5' },  // 昼
+    { t:0.62, top:'#1060b0', bot:'#80bce8' },  // 午後
+    { t:0.68, top:'#d04800', bot:'#ff9900' },  // 夕焼け開始
+    { t:0.73, top:'#7b0000', bot:'#d94010' },  // 夕焼けピーク
+    { t:0.78, top:'#350055', bot:'#6e0040' },  // 黄昏
+    { t:0.86, top:'#0d1b4b', bot:'#182070' },  // 夜
+    { t:1.00, top:'#000510', bot:'#010a30' },  // 深夜へ戻る
+];
+
+function getSkyColors(tod) {
+    let i = 0;
+    while (i < SKY_KEYS.length - 1 && tod > SKY_KEYS[i+1].t) i++;
+    const k0 = SKY_KEYS[i], k1 = SKY_KEYS[i+1];
+    const f = clamp((tod - k0.t) / (k1.t - k0.t), 0, 1);
+    return { top: lerpHex(k0.top, k1.top, f), bot: lerpHex(k0.bot, k1.bot, f) };
+}
+
+// =====================================================
+// 星（事前生成・点滅）
+// =====================================================
+const STARS = Array.from({length:60}, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H * 0.58,
+    r: 0.5 + Math.random() * 1.5,
+    phase: Math.random() * Math.PI * 2,
+}));
+
+function getStarAlpha(tod) {
+    if (tod < 0.20) return clamp(1 - tod / 0.20, 0, 1);   // 夜明けに消える
+    if (tod > 0.76) return clamp((tod - 0.76) / 0.08, 0, 1); // 夕暮れに出る
+    return 0;
+}
+
+function drawStars(alpha) {
+    const t = performance.now() / 1000;
+    ctx.save();
+    for (const s of STARS) {
+        const twinkle = 0.4 + 0.6 * Math.sin(t * 1.8 + s.phase);
+        ctx.globalAlpha = alpha * twinkle;
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+}
+
+// =====================================================
+// 太陽
+// =====================================================
+function getSunPos(tod) {
+    if (tod < 0.23 || tod > 0.74) return null;
+    const t = (tod - 0.23) / (0.74 - 0.23); // 0(日の出)〜1(日没)
+    const x = lerp(20, W - 20, t);
+    const y = H * 0.78 - Math.sin(t * Math.PI) * H * 0.68;
+    return { x, y, t };
+}
+
+function drawSun(tod) {
+    const pos = getSunPos(tod);
+    if (!pos) return;
+    const { x, y, t } = pos;
+    const isLow = t < 0.18 || t > 0.82;
+    const sunCol  = isLow ? '#ff7700' : '#ffe060';
+    const glowCol = isLow ? 'rgba(255,100,0,' : 'rgba(255,210,40,';
+
+    // グロー
+    const gr = ctx.createRadialGradient(x, y, 10, x, y, 55);
+    gr.addColorStop(0, glowCol + '0.35)');
+    gr.addColorStop(1, glowCol + '0)');
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(x, y, 55, 0, Math.PI * 2); ctx.fill();
+
+    // 太陽本体
+    ctx.fillStyle = sunCol;
+    ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI * 2); ctx.fill();
+
+    // ハイライト
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath(); ctx.arc(x - 6, y - 6, 9, 0, Math.PI * 2); ctx.fill();
+}
+
+// =====================================================
+// 月
+// =====================================================
+function getMoonPos(tod) {
+    // 月は夕暮れ〜夜明けに見える (tod > 0.72 || tod < 0.26)
+    let mt;
+    if (tod >= 0.72) mt = (tod - 0.72) / 0.54;       // 0.72〜1.0
+    else if (tod < 0.26) mt = (tod + 0.28) / 0.54;   // 0.0〜0.26 (0.28〜0.54にマップ)
+    else return null;
+    mt = clamp(mt, 0, 1);
+    const x = lerp(W - 40, 40, mt);
+    const y = H * 0.70 - Math.sin(mt * Math.PI) * H * 0.58;
+    return { x, y };
+}
+
+function drawMoon(tod) {
+    const pos = getMoonPos(tod);
+    if (!pos) return;
+    const { x, y } = pos;
+
+    // グロー
+    const gr = ctx.createRadialGradient(x, y, 8, x, y, 38);
+    gr.addColorStop(0, 'rgba(240,240,180,0.2)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(x, y, 38, 0, Math.PI * 2); ctx.fill();
+
+    // 月（三日月は evenodd で描く）
+    ctx.fillStyle = '#ddd898';
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2, false);    // 外円（時計回り）
+    ctx.arc(x + 9, y - 3, 14, 0, Math.PI * 2, true); // 内円（反時計=切り抜き）
+    ctx.fill('evenodd');
+}
+
+// =====================================================
+// 雲
+// =====================================================
+let clouds = [];
+function initClouds() {
+    clouds = Array.from({length:4}, (_, i) => makeCloud((i / 4) * W, true));
+}
+function makeCloud(startX) {
+    return { x: startX, y: 30 + Math.random() * 110, w: 70 + Math.random() * 100, spd: 0.18 + Math.random() * 0.35 };
+}
+function updateClouds() {
+    for (const c of clouds) {
+        c.x -= c.spd;
+        if (c.x + c.w < 0) { c.x = W + 60; c.y = 25 + Math.random() * 110; c.w = 70 + Math.random() * 100; }
+    }
+}
+function drawClouds(weather, tod) {
+    const isDark = weather === 'storm' || weather === 'cloudy';
+    // 曇りの場合はもっと雲を描く
+    const extraAlpha = weather === 'clear' ? 0.55 : 0.82;
+    for (const c of clouds) {
+        drawOneCloud(c.x, c.y, c.w, extraAlpha, isDark);
+    }
+    if (isDark) {
+        for (const c of clouds) drawOneCloud(c.x + c.w * 0.5, c.y + 15, c.w * 0.8, 0.5, true);
+    }
+}
+function drawOneCloud(x, y, w, alpha, isDark) {
+    const h = w * 0.4;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = isDark ? 'rgba(80,85,110,0.8)' : 'rgba(240,245,255,0.88)';
+    [[x+w*0.2, y+h*0.5, w*0.22, h*0.5], [x+w*0.5, y, w*0.30, h*0.75], [x+w*0.8, y+h*0.4, w*0.25, h*0.6]]
+        .forEach(([bx,by,bw,bh]) => { ctx.beginPath(); ctx.ellipse(bx,by,bw,bh,0,0,Math.PI*2); ctx.fill(); });
+    ctx.restore();
+}
+
+// =====================================================
+// パーティクル（雨・雪・風）
+// =====================================================
+let particles = [];
+const MAX_PARTICLES = 220;
+
+function updateParticles(weather) {
+    // 新規生成
+    if (particles.length < MAX_PARTICLES) {
+        if (weather === 'rain')        for (let i=0;i<5;i++) spawnRain(false);
+        else if (weather === 'storm')  for (let i=0;i<12;i++) spawnRain(true);
+        else if (weather === 'snow'  && Math.random() < 0.5) spawnSnow();
+        else if (weather === 'wind'  && Math.random() < 0.4) spawnWind();
+    }
+    // 更新・削除
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.type === 'snow') p.x += Math.sin(p.y * 0.035 + p.phase) * 0.45;
+        if (p.y > H + 20 || p.x < -40 || p.x > W + 40) particles.splice(i, 1);
+    }
+}
+function spawnRain(isStorm) {
+    particles.push({ type:'rain', x:Math.random()*(W+80)-40, y:-15, vx:isStorm?-3.5:-0.5, vy:14+Math.random()*6 });
+}
+function spawnSnow() {
+    particles.push({ type:'snow', x:Math.random()*W, y:-10, vx:-0.6+Math.random()*1.2, vy:1.4+Math.random()*2, r:2+Math.random()*3, phase:Math.random()*Math.PI*2 });
+}
+function spawnWind() {
+    particles.push({ type:'wind', x:W+10, y:40+Math.random()*(H-100), vx:-11-Math.random()*7, vy:Math.random()*1-0.5, len:25+Math.random()*50 });
+}
+function drawParticles() {
+    ctx.save();
+    for (const p of particles) {
+        if (p.type === 'rain') {
+            ctx.strokeStyle = 'rgba(170,205,235,0.65)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.vx*0.35, p.y - p.vy*0.35); ctx.stroke();
+        } else if (p.type === 'snow') {
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = 'rgba(180,210,240,0.4)'; ctx.lineWidth = 0.5; ctx.stroke();
+        } else if (p.type === 'wind') {
+            ctx.strokeStyle = 'rgba(200,218,240,0.2)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.len, p.y + p.vy*2); ctx.stroke();
+        }
+    }
+    ctx.restore();
+}
+
+// =====================================================
+// 雷
+// =====================================================
+let lightningFlash = 0;
+let nextLightning  = 3000; // ms
+
+function updateLightning(weather, now) {
+    if (weather === 'storm') {
+        if (lightningFlash > 0) { lightningFlash--; return; }
+        if (now > nextLightning) {
+            lightningFlash = 5 + Math.floor(Math.random() * 8);
+            nextLightning  = now + 2500 + Math.random() * 5000;
+        }
+    } else {
+        lightningFlash = 0;
+    }
+}
+function drawLightning() {
+    if (lightningFlash <= 0) return;
+    ctx.fillStyle = `rgba(210,225,255,${(lightningFlash / 10) * 0.45})`;
+    ctx.fillRect(0, 0, W, H);
+}
+
+// =====================================================
+// 背景全体の描画
+// =====================================================
+function drawBG(now) {
+    const tod     = getTod();
+    const weather = getWeather();
+
+    // 天空グラデーション
+    const sky = getSkyColors(tod);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, sky.top); g.addColorStop(1, sky.bot);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    // 星
+    const starA = getStarAlpha(tod);
+    if (starA > 0) drawStars(starA);
+
+    // 月
+    drawMoon(tod);
+    // 太陽
+    drawSun(tod);
+    // 雲
+    updateClouds();
+    drawClouds(weather, tod);
+}
+
+// =====================================================
+// 地面
+// =====================================================
+function drawGround() {
+    ctx.fillStyle = '#111'; ctx.fillRect(0, H - 18, W, 18);
+    ctx.fillStyle = '#252525'; ctx.fillRect(0, H - 18, W, 3);
+}
+
+// =====================================================
+// 入力
+// =====================================================
+function onInput() {
+    if (state === S.START) {
+        state = S.PLAY; lastSpawn = performance.now();
+        vy = JUMP_PWR; flapT = 18; return;
+    }
+    if (state === S.PLAY)  { vy = JUMP_PWR; flapT = 18; return; }
+    if (state === S.OVER || state === S.CLEAR) resetGame();
+}
+canvas.addEventListener('pointerdown', e => { e.preventDefault(); onInput(); });
+document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); onInput(); }
+});
+
+// =====================================================
+// リセット
+// =====================================================
+function resetGame() {
+    py = H / 2; vy = 0; flapT = 0;
+    pipes = []; day = 0; lastSpawn = 0;
+    flashMsg = ''; flashT = 0;
+    particles = []; lightningFlash = 0;
+    state = S.START;
+}
+
+// =====================================================
+// パイプ生成
+// =====================================================
+function spawnPipe() {
+    const topH    = 80 + Math.random() * (H - PIPE_GAP - 160);
+    const nextDay = day + 1 + pipes.filter(p => !p.counted).length;
+    const ob      = GAME_DICTIONARY.obstacles.find(o => o.day === nextDay);
+    pipes.push({ x: W + 20, topH, text: ob ? ob.text : `Day ${nextDay}`, counted: false });
+}
+
+// =====================================================
+// 当たり判定（円 vs 矩形）
+// =====================================================
+function hits(cx, cy, r, rx, ry, rw, rh) {
+    const nx = Math.max(rx, Math.min(cx, rx+rw));
+    const ny = Math.max(ry, Math.min(cy, ry+rh));
+    return (cx-nx)**2 + (cy-ny)**2 < r*r;
+}
+
+// =====================================================
+// ゲームロジック更新
+// =====================================================
+function update(now) {
+    if (state !== S.PLAY) return;
+
+    vy += GRAVITY; py += vy;
+    if (flapT > 0) flapT--;
+    if (flashT > 0) flashT--;
+
+    // 天井
+    if (py - HIT_R < 0) { py = HIT_R; vy = 0; }
+    // 床
+    if (py + HIT_R >= H - 18) { state = S.OVER; return; }
+
+    // パイプ生成
+    if (now - lastSpawn > SPAWN_MS) { spawnPipe(); lastSpawn = now; }
+
+    // パイプ移動・スコア・衝突
+    for (let i = pipes.length - 1; i >= 0; i--) {
+        const p = pipes[i];
+        p.x -= PIPE_SPD;
+        if (!p.counted && p.x + PIPE_W < PX - HIT_R) {
+            p.counted = true; day++;
+            flashMsg = `Day ${day} 突破！`; flashT = 50;
+            if (day >= 365) { state = S.CLEAR; return; }
+        }
+        if (p.x + PIPE_W < -10) { pipes.splice(i, 1); continue; }
+        if (hits(PX, py, HIT_R, p.x, 0, PIPE_W, p.topH) ||
+            hits(PX, py, HIT_R, p.x, p.topH + PIPE_GAP, PIPE_W, H)) {
+            state = S.OVER; return;
+        }
+    }
+}
+
+// =====================================================
+// パイプ描画
+// =====================================================
+function drawPipes() {
+    for (const p of pipes) {
+        drawPipeBody(p.x, 0,              PIPE_W, p.topH,                   true);
+        drawPipeBody(p.x, p.topH+PIPE_GAP, PIPE_W, H - p.topH - PIPE_GAP, false);
+        drawExcuseSign(p);
+    }
+}
+function drawPipeBody(x, y, w, h, isTop) {
+    const g = ctx.createLinearGradient(x, 0, x+w, 0);
+    g.addColorStop(0,   '#a82000'); g.addColorStop(0.35,'#e83a18');
+    g.addColorStop(0.6, '#ff5533'); g.addColorStop(1,   '#881500');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fillRect(x+4, y, 8, h);
+
+    const capY = isTop ? y + h - 24 : y;
+    ctx.fillStyle = '#ff6040'; ctx.fillRect(x-7, capY, w+14, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(x-7, capY, w+14, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(x-7, capY+20, w+14, 4);
+}
+function drawExcuseSign(p) {
+    const cx = p.x + PIPE_W / 2, cy = p.topH + PIPE_GAP / 2;
+    ctx.save();
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    const lines = wrapLines(p.text, 122);
+    const lh = 20, bh = lines.length * lh + 14, bw = 146;
+
+    ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = 'rgba(8,4,28,0.90)';
+    rRect(cx - bw/2, cy - bh/2, bw, bh, 8); ctx.fill();
+
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = '#FF5722'; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.fillStyle = '#FF8A65';
+    lines.forEach((line, i) => ctx.fillText(line, cx, cy - (lines.length-1)*lh/2 + i*lh));
+    ctx.restore();
+}
+
+// =====================================================
+// キャラクター描画（画像ベース・2枚切り替え）
+// 上昇中(vy < 0) → peak（腕上げ）
+// 下降・待機中   → idle（腕下げ）
+// =====================================================
+
+// アスペクト比（Width / Height）
+const CHAR_ASPECT = { idle: 817 / 1231, peak: 1238 / 1238 };
+// 高さを固定にすることでサイズ変化を防ぐ
+// 幅はアスペクト比から自動計算 → 腕を上げると自然に横に広がる
+const CHAR_H    = 70;   // 表示高さ（px）固定
+const CHAR_ANCH = 0.55; // 上端からの腹部位置（55%）= py に対応させる
+
+function drawCharacter() {
+    const imgKey = vy < 0 ? 'peak' : 'idle';
+    const img    = imgs[imgKey];
+    const dh     = CHAR_H;
+    const dw     = dh * CHAR_ASPECT[imgKey];
+    const tilt   = clamp(vy * 0.055, -0.45, 0.40);
+
+    ctx.save();
+    ctx.translate(PX, py);
+    ctx.rotate(tilt);
+
+    if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -dw / 2, -dh * CHAR_ANCH, dw, dh);
+    } else {
+        ctx.fillStyle = '#FF5722';
+        ctx.beginPath(); ctx.arc(0, 0, HIT_R, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+// =====================================================
+// HUD（スコア表示）
+// =====================================================
+function drawHUD() {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 6;
+
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('継続日数', W/2, 28);
+
+    ctx.font = 'bold 38px sans-serif'; ctx.fillStyle = 'white';
+    ctx.fillText(`Day ${day}`, W/2, 64);
+
+    // 通過フラッシュ
+    if (flashT > 0) {
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillStyle = `rgba(255,200,50,${Math.min(1, flashT/20)})`;
+        ctx.fillText(flashMsg, W/2, 93);
+    }
+
+    // 天気アイコン（右上）
+    const wIcons = { clear:'☀', cloudy:'☁', rain:'🌧', snow:'❄', wind:'💨', storm:'⚡' };
+    const icon = wIcons[getWeather()] || '';
+    ctx.font = '18px sans-serif'; ctx.textAlign = 'right'; ctx.shadowBlur = 0;
+    ctx.fillText(icon, W - 12, 28);
+
+    ctx.restore();
+}
+
+// =====================================================
+// 各種画面
+// =====================================================
+function drawStartScreen() {
+    ctx.fillStyle = 'rgba(0,0,15,0.74)'; ctx.fillRect(0,0,W,H);
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 10;
+
+    ctx.font = 'bold 56px sans-serif'; ctx.fillStyle = '#FF5722';
+    ctx.fillText('Side', W/2, H/2 - 100);
+    ctx.fillStyle = '#FF8A65'; ctx.fillText('Raiser', W/2, H/2 - 42);
+
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#FFB74D';
+    ctx.fillText('サイドレイザー', W/2, H/2 + 8);
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#999';
+    ctx.fillText('筋トレ継続365日への道', W/2, H/2 + 33);
+
+    if (Math.floor(performance.now() / 600) % 2) {
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = 'white';
+        ctx.fillText('タップして開始！', W/2, H/2 + 82);
+    }
+    ctx.shadowBlur = 0;
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#444';
+    ctx.fillText('Space・クリック・タップ', W/2, H - 22);
+}
+
+function drawOverScreen() {
+    ctx.fillStyle = 'rgba(0,0,10,0.82)'; ctx.fillRect(0,0,W,H);
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
+
+    ctx.font = 'bold 38px sans-serif'; ctx.fillStyle = '#FF5722';
+    ctx.fillText('GAME OVER', W/2, H/2 - 110);
+    ctx.font = 'bold 32px sans-serif'; ctx.fillStyle = 'white';
+    ctx.fillText(`Day ${day}`, W/2, H/2 - 68);
+
+    ctx.shadowBlur = 0;
+    const msg = getOverMsg(day);
+    ctx.font = '15px sans-serif'; ctx.fillStyle = '#FF8A65';
+    drawWrapped(msg, W/2, H/2 - 18, W - 70, 24);
+
+    if (Math.floor(performance.now() / 650) % 2) {
+        ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = 'white';
+        ctx.fillText('タップして再挑戦', W/2, H/2 + 95);
+    }
+}
+
+function drawClearScreen() {
+    ctx.fillStyle = 'rgba(0,0,10,0.92)'; ctx.fillRect(0,0,W,H);
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(255,200,0,0.8)'; ctx.shadowBlur = 20;
+
+    ctx.font = 'bold 28px sans-serif'; ctx.fillStyle = '#FFD700';
+    ctx.fillText('Day 365 達成！！', W/2, 90);
+    ctx.font = 'bold 42px sans-serif'; ctx.fillText('★', W/2, 145);
+
+    ctx.shadowBlur = 0;
+    ctx.font = '14px sans-serif'; ctx.fillStyle = '#FF8A65';
+    ctx.fillText(GAME_DICTIONARY.clearMessage.stat, W/2, 183);
+
+    ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = 'white';
+    drawWrapped(GAME_DICTIONARY.clearMessage.message, W/2, 218, W - 60, 26);
+
+    if (Math.floor(performance.now() / 650) % 2) {
+        ctx.font = '14px sans-serif'; ctx.fillStyle = '#666';
+        ctx.fillText('タップして最初から', W/2, H - 28);
+    }
+}
+
+function getOverMsg(d) {
+    for (const e of GAME_DICTIONARY.gameOverMessages)
+        if (d >= e.minDay && d <= e.maxDay) return e.message;
+    return 'また挑戦しよう！';
+}
+
+// =====================================================
+// メインゲームループ
+// =====================================================
+initClouds();
+
+function loop(now) {
+    const weather = getWeather();
+
+    update(now);
+    updateParticles(weather);
+    updateLightning(weather, now);
+
+    // 描画（後ろから前の順）
+    drawBG(now);
+    drawParticles();     // 雨・雪は背景レイヤー
+    drawPipes();
+    drawCharacter();
+    drawGround();
+    drawLightning();     // 雷フラッシュ（全面に重ねる）
+
+    if (state !== S.START) drawHUD();
+    if (state === S.START)  drawStartScreen();
+    if (state === S.OVER)   drawOverScreen();
+    if (state === S.CLEAR)  drawClearScreen();
+
+    requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
