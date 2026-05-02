@@ -39,6 +39,7 @@
 <body>
 <canvas id="game"></canvas>
 <button id="muteBtn" type="button" aria-label="ミュート切り替え">🔊</button>
+<audio id="bgm" src="audio/the_gold_medal_run.mp3" loop preload="auto"></audio>
 <script>
 
 // =====================================================
@@ -346,6 +347,22 @@ function ensureAudio() {
     if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
+// =====================================================
+// BGM
+// =====================================================
+const bgm = document.getElementById('bgm');
+bgm.volume = 0.4;
+bgm.muted = muted;
+
+function bgmPlay() {
+    bgm.currentTime = 0;
+    bgm.play().catch(() => {});
+}
+function bgmStop() {
+    bgm.pause();
+    bgm.currentTime = 0;
+}
+
 function playFlap() {
     if (muted || !audioCtx) return;
     const t0 = audioCtx.currentTime;
@@ -400,6 +417,7 @@ muteBtn.addEventListener('click', e => {
     e.stopPropagation();
     muted = !muted;
     try { localStorage.setItem('sr_muted_v1', muted ? '1' : '0'); } catch(err) {}
+    bgm.muted = muted;
     updateMuteUI();
 });
 muteBtn.addEventListener('pointerdown', e => e.stopPropagation());
@@ -780,6 +798,7 @@ function onInput() {
     if (state === S.START) {
         state = S.PLAY; lastSpawn = performance.now();
         vy = JUMP_PWR; flapT = 18;
+        bgmPlay();
         playFlap();
         return;
     }
@@ -835,7 +854,7 @@ function update(now) {
     // 天井
     if (py - HIT_R < 0) { py = HIT_R; vy = 0; }
     // 床
-    if (py + HIT_R >= H - 18) { state = S.OVER; return; }
+    if (py + HIT_R >= H - 18) { bgmStop(); state = S.OVER; return; }
 
     // パイプ生成
     if (now - lastSpawn > SPAWN_MS) { spawnPipe(); lastSpawn = now; }
@@ -856,12 +875,12 @@ function update(now) {
             spawnShards(bcx, bcy, bw, bh);
             playSmash();
             flashMsg = `Day ${day} 突破！`; flashT = 50;
-            if (day >= 365) { state = S.CLEAR; return; }
+            if (day >= 365) { bgmStop(); state = S.CLEAR; return; }
         }
         if (p.x + PIPE_W < -10) { pipes.splice(i, 1); continue; }
         if (hits(PX, py, HIT_R, p.x, 0, PIPE_W, p.topH) ||
             hits(PX, py, HIT_R, p.x, p.topH + PIPE_GAP, PIPE_W, H)) {
-            state = S.OVER; return;
+            bgmStop(); state = S.OVER; return;
         }
     }
 }
