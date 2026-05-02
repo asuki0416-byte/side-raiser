@@ -15,10 +15,30 @@
             overflow: hidden;
         }
         canvas { display: block; }
+        #muteBtn {
+            position: fixed; top: 12px; right: 12px;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(0,0,0,0.55);
+            color: white;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 10;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0;
+        }
+        #muteBtn:hover { background: rgba(0,0,0,0.75); }
+        #muteBtn:active { transform: scale(0.92); }
     </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<button id="muteBtn" type="button" aria-label="ミュート切り替え">🔊</button>
 <script>
 
 // =====================================================
@@ -307,6 +327,83 @@ let py = H/2, vy = 0, flapT = 0;
 let pipes = [], lastSpawn = 0;
 let day = 0;
 let flashMsg = '', flashT = 0;
+let shardParticles = [];
+const MAX_SHARDS = 64;
+
+// =====================================================
+// Web Audio（効果音）
+// =====================================================
+let audioCtx = null;
+let muted = false;
+try { muted = localStorage.getItem('sr_muted_v1') === '1'; } catch(e) {}
+
+function ensureAudio() {
+    if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try { audioCtx = new AC(); } catch(e) { audioCtx = null; return; }
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playFlap() {
+    if (muted || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const dur = 0.08 + Math.random() * 0.04;
+    const baseFreq = 320 + (Math.random() - 0.5) * 100;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(60, baseFreq * 0.55), t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(0.18, t0 + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+}
+
+function playSmash() {
+    if (muted || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+
+    // 低音ドン
+    const lowOsc = audioCtx.createOscillator();
+    const lowGain = audioCtx.createGain();
+    lowOsc.type = 'sine';
+    lowOsc.frequency.setValueAtTime(95, t0);
+    lowOsc.frequency.exponentialRampToValueAtTime(40, t0 + 0.05);
+    lowGain.gain.setValueAtTime(0.28, t0);
+    lowGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.07);
+    lowOsc.connect(lowGain).connect(audioCtx.destination);
+    lowOsc.start(t0); lowOsc.stop(t0 + 0.09);
+
+    // 高音チリン
+    const hiOsc = audioCtx.createOscillator();
+    const hiGain = audioCtx.createGain();
+    hiOsc.type = 'sawtooth';
+    hiOsc.frequency.setValueAtTime(1050 + Math.random() * 250, t0);
+    hiOsc.frequency.exponentialRampToValueAtTime(680, t0 + 0.2);
+    hiGain.gain.setValueAtTime(0.0001, t0);
+    hiGain.gain.linearRampToValueAtTime(0.09, t0 + 0.005);
+    hiGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+    hiOsc.connect(hiGain).connect(audioCtx.destination);
+    hiOsc.start(t0); hiOsc.stop(t0 + 0.22);
+}
+
+// =====================================================
+// ミュートトグル
+// =====================================================
+const muteBtn = document.getElementById('muteBtn');
+function updateMuteUI() { muteBtn.textContent = muted ? '🔇' : '🔊'; }
+muteBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    muted = !muted;
+    try { localStorage.setItem('sr_muted_v1', muted ? '1' : '0'); } catch(err) {}
+    updateMuteUI();
+});
+muteBtn.addEventListener('pointerdown', e => e.stopPropagation());
+updateMuteUI();
 
 // =====================================================
 // 時刻・天気システム
@@ -535,6 +632,90 @@ function drawParticles() {
 }
 
 // =====================================================
+// 破片パーティクル（テキストボックス破壊エフェクト）
+// =====================================================
+const SHARD_GRAVITY = 0.4;
+const SHARD_LIFE    = 36;
+
+function spawnShards(cx, cy, bw, bh) {
+    // 4列×2行=8セルに分割し、内部境界をランダムにずらして不規則四角片にする
+    const cols = 4, rows = 2;
+    const cellW = bw / cols, cellH = bh / rows;
+    const x0 = cx - bw / 2, y0 = cy - bh / 2;
+    const j = 5;
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const x1 = x0 + c * cellW       + (c === 0      ? 0 : (Math.random()-0.5)*j);
+            const x2 = x0 + (c+1) * cellW   + (c === cols-1 ? 0 : (Math.random()-0.5)*j);
+            const y1 = y0 + r * cellH       + (r === 0      ? 0 : (Math.random()-0.5)*j);
+            const y2 = y0 + (r+1) * cellH   + (r === rows-1 ? 0 : (Math.random()-0.5)*j);
+            const ccx = (x1 + x2) / 2, ccy = (y1 + y2) / 2;
+
+            const dx = ccx - cx, dy = ccy - cy;
+            const dist = Math.hypot(dx, dy) || 1;
+            const speed = 3.2 + Math.random() * 2.8;
+            const vx = (dx / dist) * speed + (Math.random()-0.5) * 0.8;
+            const vy = (dy / dist) * speed + (Math.random()-0.5) * 0.8 - 1.5;
+
+            const verts = [
+                { x: x1 - ccx, y: y1 - ccy },
+                { x: x2 - ccx, y: y1 - ccy },
+                { x: x2 - ccx, y: y2 - ccy },
+                { x: x1 - ccx, y: y2 - ccy },
+            ];
+            shardParticles.push({
+                cx: ccx, cy: ccy, vx, vy,
+                rot: 0, vrot: (Math.random()-0.5) * 0.32,
+                verts,
+                life: SHARD_LIFE, maxLife: SHARD_LIFE,
+                flash: 2,
+            });
+        }
+    }
+    if (shardParticles.length > MAX_SHARDS) {
+        shardParticles.splice(0, shardParticles.length - MAX_SHARDS);
+    }
+}
+
+function updateShards() {
+    for (let i = shardParticles.length - 1; i >= 0; i--) {
+        const s = shardParticles[i];
+        s.vy += SHARD_GRAVITY;
+        s.cx += s.vx;
+        s.cy += s.vy;
+        s.rot += s.vrot;
+        s.life--;
+        if (s.flash > 0) s.flash--;
+        if (s.life <= 0) shardParticles.splice(i, 1);
+    }
+}
+
+function drawShards() {
+    if (shardParticles.length === 0) return;
+    for (const s of shardParticles) {
+        const alpha = Math.max(0, s.life / s.maxLife);
+        const isFlash = s.flash > 0;
+        ctx.save();
+        ctx.translate(s.cx, s.cy);
+        ctx.rotate(s.rot);
+        ctx.fillStyle = isFlash
+            ? `rgba(255,255,255,${alpha})`
+            : `rgba(255,138,101,${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(s.verts[0].x, s.verts[0].y);
+        for (let i = 1; i < s.verts.length; i++) ctx.lineTo(s.verts[i].x, s.verts[i].y);
+        ctx.closePath();
+        ctx.fill();
+        if (!isFlash) {
+            ctx.strokeStyle = `rgba(255,87,34,${alpha * 0.7})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
+// =====================================================
 // 雷
 // =====================================================
 let lightningFlash = 0;
@@ -595,11 +776,14 @@ function drawGround() {
 // 入力
 // =====================================================
 function onInput() {
+    ensureAudio();
     if (state === S.START) {
         state = S.PLAY; lastSpawn = performance.now();
-        vy = JUMP_PWR; flapT = 18; return;
+        vy = JUMP_PWR; flapT = 18;
+        playFlap();
+        return;
     }
-    if (state === S.PLAY)  { vy = JUMP_PWR; flapT = 18; return; }
+    if (state === S.PLAY)  { vy = JUMP_PWR; flapT = 18; playFlap(); return; }
     if (state === S.OVER || state === S.CLEAR) resetGame();
 }
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); onInput(); });
@@ -615,6 +799,7 @@ function resetGame() {
     pipes = []; day = 0; lastSpawn = 0;
     flashMsg = ''; flashT = 0;
     particles = []; lightningFlash = 0;
+    shardParticles = [];
     state = S.START;
 }
 
@@ -661,6 +846,15 @@ function update(now) {
         p.x -= PIPE_SPD;
         if (!p.counted && p.x + PIPE_W < PX - HIT_R) {
             p.counted = true; day++;
+            // テキストボックスを破片化
+            ctx.save();
+            ctx.font = 'bold 13px sans-serif';
+            const lines = wrapLines(p.text, 122);
+            ctx.restore();
+            const bw = 146, bh = lines.length * 20 + 14;
+            const bcx = p.x + PIPE_W / 2, bcy = p.topH + PIPE_GAP / 2;
+            spawnShards(bcx, bcy, bw, bh);
+            playSmash();
             flashMsg = `Day ${day} 突破！`; flashT = 50;
             if (day >= 365) { state = S.CLEAR; return; }
         }
@@ -679,7 +873,7 @@ function drawPipes() {
     for (const p of pipes) {
         drawPipeBody(p.x, 0,              PIPE_W, p.topH,                   true);
         drawPipeBody(p.x, p.topH+PIPE_GAP, PIPE_W, H - p.topH - PIPE_GAP, false);
-        drawExcuseSign(p);
+        if (!p.counted) drawExcuseSign(p);
     }
 }
 function drawPipeBody(x, y, w, h, isTop) {
@@ -867,12 +1061,14 @@ function loop(now) {
 
     update(now);
     updateParticles(weather);
+    updateShards();
     updateLightning(weather, now);
 
     // 描画（後ろから前の順）
     drawBG(now);
     drawParticles();     // 雨・雪は背景レイヤー
     drawPipes();
+    drawShards();        // パイプ通過時の破片
     drawCharacter();
     drawGround();
     drawLightning();     // 雷フラッシュ（全面に重ねる）
