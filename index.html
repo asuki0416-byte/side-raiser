@@ -40,10 +40,12 @@
 <canvas id="game"></canvas>
 <button id="muteBtn" type="button" aria-label="ミュート切り替え">🔊</button>
 <audio id="bgm" src="audio/the_gold_medal_run.mp3" loop preload="auto"></audio>
-<script src="js/config.js?v=1"></script>
-<script src="js/utils.js?v=1"></script>
-<script src="js/audio.js?v=1"></script>
-<script src="dictionary.js?v=2"></script>
+<script src="js/config.js?v=2"></script>
+<script src="js/utils.js?v=2"></script>
+<script src="js/audio.js?v=2"></script>
+<script src="js/components/BackgroundSystem.js?v=1"></script>
+<script src="js/components/HUD.js?v=1"></script>
+<script src="dictionary.js?v=3"></script>
 <script>
 
 // =====================================================
@@ -77,6 +79,12 @@ let pipes = [], lastSpawn = 0;
 let day = 0;
 let flashMsg = '', flashT = 0;
 let shardParticles = [];
+
+// =====================================================
+// コンポーネント初期化
+// =====================================================
+const bgSystem = new BackgroundSystem();
+const hud = new HUD();
 
 // =====================================================
 // ミュートトグル（HTML内で UI 更新）
@@ -401,31 +409,6 @@ function drawLightning() {
     ctx.fillRect(0, 0, W, H);
 }
 
-// =====================================================
-// 背景全体の描画
-// =====================================================
-function drawBG(now) {
-    const tod     = getTod();
-    const weather = getWeather();
-
-    // 天空グラデーション
-    const sky = getSkyColors(tod);
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, sky.top); g.addColorStop(1, sky.bot);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-
-    // 星
-    const starA = getStarAlpha(tod);
-    if (starA > 0) drawStars(starA);
-
-    // 月
-    drawMoon(tod);
-    // 太陽
-    drawSun(tod);
-    // 雲
-    updateClouds();
-    drawClouds(weather, tod);
-}
 
 // =====================================================
 // 地面
@@ -602,36 +585,6 @@ function drawCharacter() {
     ctx.restore();
 }
 
-// =====================================================
-// HUD（スコア表示）
-// =====================================================
-function drawHUD() {
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 6;
-
-    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fillText('継続日数', W/2, 28);
-
-    ctx.font = 'bold 38px sans-serif'; ctx.fillStyle = 'white';
-    ctx.fillText(`Day ${day}`, W/2, 64);
-
-    // 通過フラッシュ
-    if (flashT > 0) {
-        ctx.shadowBlur = 0;
-        ctx.font = 'bold 20px sans-serif';
-        ctx.fillStyle = `rgba(255,200,50,${Math.min(1, flashT/20)})`;
-        ctx.fillText(flashMsg, W/2, 93);
-    }
-
-    // 天気アイコン（右上）
-    const wIcons = { clear:'☀', cloudy:'☁', rain:'🌧', snow:'❄', wind:'💨', storm:'⚡' };
-    const icon = wIcons[getWeather()] || '';
-    ctx.font = '18px sans-serif'; ctx.textAlign = 'right'; ctx.shadowBlur = 0;
-    ctx.fillText(icon, W - 12, 28);
-
-    ctx.restore();
-}
 
 // =====================================================
 // 各種画面
@@ -716,23 +669,18 @@ function getOverMsg(d) {
 initClouds();
 
 function loop(now) {
-    const weather = getWeather();
-
     update(now);
-    updateParticles(weather);
+    bgSystem.update(day, now);
     updateShards();
-    updateLightning(weather, now);
 
     // 描画（後ろから前の順）
-    drawBG(now);
-    drawParticles();     // 雨・雪は背景レイヤー
+    bgSystem.draw(day, now);
     drawPipes();
     drawShards();        // パイプ通過時の破片
     drawCharacter();
-    drawGround();
     drawLightning();     // 雷フラッシュ（全面に重ねる）
 
-    if (state !== S.START) drawHUD();
+    if (state !== S.START) hud.draw(day, getWeather(), getTod(), flashMsg, flashT);
     if (state === S.START)  drawStartScreen();
     if (state === S.OVER)   drawOverScreen();
     if (state === S.CLEAR)  drawClearScreen();
