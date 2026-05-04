@@ -45,6 +45,7 @@
 <script src="js/audio.js?v=2"></script>
 <script src="js/components/BackgroundSystem.js?v=1"></script>
 <script src="js/components/HUD.js?v=1"></script>
+<script src="js/components/ObstacleRack.js?v=1"></script>
 <script src="dictionary.js?v=3"></script>
 <script>
 
@@ -518,22 +519,11 @@ function update(now) {
 // =====================================================
 function drawPipes() {
     for (const p of pipes) {
-        drawPipeBody(p.x, 0,              PIPE_W, p.topH,                   true);
-        drawPipeBody(p.x, p.topH+PIPE_GAP, PIPE_W, H - p.topH - PIPE_GAP, false);
+        const rack = new ObstacleRack(p.x, p.topH, PIPE_GAP);
+        rack.drawTop(ctx);
+        rack.drawBottom(ctx);
         if (!p.counted) drawExcuseSign(p);
     }
-}
-function drawPipeBody(x, y, w, h, isTop) {
-    const g = ctx.createLinearGradient(x, 0, x+w, 0);
-    g.addColorStop(0,   '#a82000'); g.addColorStop(0.35,'#e83a18');
-    g.addColorStop(0.6, '#ff5533'); g.addColorStop(1,   '#881500');
-    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fillRect(x+4, y, 8, h);
-
-    const capY = isTop ? y + h - 24 : y;
-    ctx.fillStyle = '#ff6040'; ctx.fillRect(x-7, capY, w+14, 24);
-    ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(x-7, capY, w+14, 4);
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(x-7, capY+20, w+14, 4);
 }
 function drawExcuseSign(p) {
     const cx = p.x + PIPE_W / 2, cy = p.topH + PIPE_GAP / 2;
