@@ -46,7 +46,8 @@
 <script src="js/components/BackgroundSystem.js?v=1"></script>
 <script src="js/components/HUD.js?v=1"></script>
 <script src="js/components/ObstacleRack.js?v=1"></script>
-<script src="dictionary.js?v=3"></script>
+<script src="js/components/CommentBubble.js?v=1"></script>
+<script src="dictionary.js?v=4"></script>
 <script>
 
 // =====================================================
@@ -86,6 +87,7 @@ let shardParticles = [];
 // =====================================================
 const bgSystem = new BackgroundSystem();
 const hud = new HUD();
+const commentBubble = new CommentBubble();
 
 // =====================================================
 // ミュートトグル（HTML内で UI 更新）
@@ -458,7 +460,7 @@ function spawnPipe() {
     const topH    = 80 + Math.random() * (H - PIPE_GAP - 160);
     const nextDay = day + 1 + pipes.filter(p => !p.counted).length;
     const ob      = GAME_DICTIONARY.obstacles.find(o => o.day === nextDay);
-    pipes.push({ x: W + 20, topH, text: ob ? ob.text : `Day ${nextDay}`, counted: false });
+    pipes.push({ x: W + 20, topH, text: ob ? ob.text : `Day ${nextDay}`, account: ob ? (ob.account || "") : "", counted: false });
 }
 
 // =====================================================
@@ -527,23 +529,8 @@ function drawPipes() {
 }
 function drawExcuseSign(p) {
     const cx = p.x + PIPE_W / 2, cy = p.topH + PIPE_GAP / 2;
-    ctx.save();
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-
-    const lines = wrapLines(p.text, 122);
-    const lh = 20, bh = lines.length * lh + 14, bw = 146;
-
-    ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
-    ctx.fillStyle = 'rgba(8,4,28,0.90)';
-    rRect(cx - bw/2, cy - bh/2, bw, bh, 8); ctx.fill();
-
-    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    ctx.strokeStyle = '#FF5722'; ctx.lineWidth = 2; ctx.stroke();
-
-    ctx.fillStyle = '#FF8A65';
-    lines.forEach((line, i) => ctx.fillText(line, cx, cy - (lines.length-1)*lh/2 + i*lh));
-    ctx.restore();
+    const account = p.account || '';
+    commentBubble.draw(ctx, cx, cy, p.text, account);
 }
 
 // =====================================================
