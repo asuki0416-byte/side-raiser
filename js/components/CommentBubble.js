@@ -15,7 +15,9 @@ class CommentBubble {
         const hasAvatar = account && account.length > 0;
         const avatarW = 18;
         const padding = 6;
-        const bodyW = 130;
+        const bodyW = 148;
+        // wrapLines はctx.measureText を使うので、本文と同じフォントを先にセットしておく
+        ctx.font = '11px monospace';
         const textMaxW = bodyW - (hasAvatar ? avatarW + padding : 0) - padding * 2;
         const lines = wrapLines(text, textMaxW);
         const lineH = 14;
